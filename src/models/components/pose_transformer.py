@@ -173,6 +173,7 @@ class TokenizedPoseTransformer(nn.Module):
 
     def forward(self, batch, gt):
         visual_inertial_features, _, _ = batch
+        # visual_inertial_features torch.Size([128, 10, 768])
         seq_length = visual_inertial_features.size(1)
         B,S,E = visual_inertial_features.shape
         gt = torch.tensor(gt).view(B,S,6).to("cuda")

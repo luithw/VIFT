@@ -64,7 +64,7 @@ with torch.no_grad():
         imgs = imgs.to("cuda").float()
         imus = imus.to("cuda").float()
         feat_v, feat_i = model(imgs, imus)
-        latent_vector = torch.cat((feat_v, feat_i), 2)
+        latent_vector = torch.cat((feat_v, feat_i), 2)  # torch.Size([1, 10, 768])
         latent_vector = latent_vector.squeeze(0)
         np.save(os.path.join(save_dir,f"{i}.npy"), latent_vector.cpu().detach().numpy())
         # also save the ground truth, rotation and weight

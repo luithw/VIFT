@@ -28,6 +28,7 @@ class WeightedVIOLitModule(LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, target = batch
+        breakpoint()
         out = self.forward(x, target)
         weight = x[-1]
         loss = self.criterion(out, target, weight)
