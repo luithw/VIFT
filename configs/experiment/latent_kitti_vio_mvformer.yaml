@@ -31,12 +31,12 @@ model:
     lr: 0.0001
 
   criterion:
-    _target_: src.metrics.weighted_loss.AngleWeightedPoseLoss
+    _target_: src.metrics.weighted_loss.RPMGPoseLoss
     base_loss_fn:
       _target_: torch.nn.L1Loss
       reduction: none
-    angle_weight: 10
-  
+    angle_weight: 40
+
   scheduler:
     T_0: 25
     T_mult: 1
@@ -44,6 +44,7 @@ model:
   tester:
     seq_len: 11
     use_history_in_eval: True
+
 
 
 

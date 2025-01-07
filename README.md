@@ -102,9 +102,16 @@ Train model with chosen experiment configuration from [configs/experiment/](conf
 python src/train.py experiment=experiment_name.yaml trainer=gpu
 ```
 
+
+Best paper results
+```bash
+python src/train.py experiment=latent_kitti_vio_weighted_tf trainer=gpu logger=tensorboard  tags=['TE, 11, L1, 40, no, yes']
+```
+
+
 MVFormer
 ```bash
-python src/train.py experiment=latent_kitti_vio_mvformer model.criterion.angle_weight=1 trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
+python src/train.py experiment=latent_kitti_vio_mvformer model.criterion.angle_weight=10 trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
 ```
   
 
