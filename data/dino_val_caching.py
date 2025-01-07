@@ -62,7 +62,7 @@ def main():
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     # Create save directory
-    save_dir = "kitti_dino_features/val"
+    save_dir = "kitti_dino_features/val_10"
     os.makedirs(save_dir, exist_ok=True)
 
     # Load DINO ViT model

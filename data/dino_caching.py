@@ -58,7 +58,7 @@ def main():
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     # Create save directory
-    save_dir = "kitti_dino_features/train"
+    save_dir = "kitti_dino_features/train_10"
     os.makedirs(save_dir, exist_ok=True)
 
     # Load DINO ViT model
@@ -85,10 +85,10 @@ def main():
 
             # Reshape for batch processing
             imgs = imgs.view(-1, C, H, W)
-            imgs = imgs.to("cuda")
+            # imgs = imgs.to("cuda")
             
             # Extract features
-            features = feature_extractor(imgs)  # [11, num_tokens, feature_dim*3]
+            features = feature_extractor(imgs)  # [11, num_tokens, feature_dim*3], torch.Size([10, 785, 2304])
 
             # Save features and metadata
             np.save(os.path.join(save_dir, f"{i}_features.npy"), 

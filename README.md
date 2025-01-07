@@ -102,6 +102,12 @@ Train model with chosen experiment configuration from [configs/experiment/](conf
 python src/train.py experiment=experiment_name.yaml trainer=gpu
 ```
 
+MVFormer
+```bash
+python src/train.py experiment=latent_kitti_vio_mvformer model.criterion.angle_weight=1 trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
+```
+  
+
 You can override any parameter from command line like this
 
 ```bash
