@@ -76,6 +76,12 @@ def main():
     with torch.no_grad():
         for i, ((imgs, imus, rot, w), gts) in tqdm(enumerate(loader), total=len(loader)):
 
+            # if the feature is already extracted, skip
+            if os.path.exists(os.path.join(save_dir, f"{i}_features.npy")):
+                continue
+            else:
+                print(f"Extracting features for sequence {i}")
+
             # Skip the first image because it is the starting point
             imgs = imgs[:, 1:]
 
