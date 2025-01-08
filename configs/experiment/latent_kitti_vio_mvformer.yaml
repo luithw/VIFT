@@ -22,7 +22,7 @@ trainer:
   log_every_n_steps: 1
 
 data:
-  batch_size: 64
+  batch_size: 128
 
 model:
   _target_: src.models.weighted_vio_module.WeightedVIOLitModule

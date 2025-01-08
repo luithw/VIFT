@@ -12,6 +12,9 @@ transform_train = custom_transform.Compose(transform_train)
 dataset = KITTI("kitti_data", train_seqs=['00','01','02','04','06', '08', '09'], transform=transform_train, sequence_length=11)
 save_dir = "kitti_latent_data/train_10"
 loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+
+print(f"total kitti sequences: {len(dataset)}")
+
 # we need to define helpers to convert the dictionary to object
 class ObjFromDict:
     def __init__(self, dictionary):

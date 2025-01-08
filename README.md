@@ -111,7 +111,9 @@ python src/train.py experiment=latent_kitti_vio_weighted_tf trainer=gpu logger=t
 
 MVFormer
 ```bash
-python src/train.py experiment=latent_kitti_vio_mvformer model.criterion.angle_weight=10 trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
+python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
+
+python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no'] debug=default
 ```
   
 

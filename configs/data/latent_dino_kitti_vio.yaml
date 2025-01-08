@@ -1,6 +1,6 @@
 _target_: src.data.vio_datamodule.VIODataModule
 batch_size: 4 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
-num_workers: 0
+num_workers: 16
 pin_memory: False
 train_loader:
   _target_: src.data.components.latent_dino_kitti_dataset.LatentDinoVectorDataset

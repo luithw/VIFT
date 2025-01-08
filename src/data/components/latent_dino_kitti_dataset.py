@@ -2,6 +2,7 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
 
 class LatentDinoVectorDataset(Dataset):
@@ -33,3 +34,12 @@ class LatentDinoVectorDataset(Dataset):
             torch.from_numpy(rot),
             torch.from_numpy(w),
         ), torch.from_numpy(gt).to(torch.float).squeeze()
+
+
+if __name__ == "__main__":
+    dataset = LatentDinoVectorDataset("data/kitti_latent_data/train_10")
+    loader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=16)
+    print(f"total sequences: {len(dataset)}")
+
+    for i, ((latent_vector, dino_features, rot, w), gt) in enumerate(tqdm(loader)):
+        continue
