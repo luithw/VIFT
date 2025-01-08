@@ -69,7 +69,7 @@ class VIOLitModule(LightningModule):
             self.log(f"test/{name}", value)
         
         save_dir = self.trainer.logger.log_dir
-        self.tester.save_results(results, save_dir)
+        # self.tester.save_results(results, save_dir)
 
     def setup(self, stage):
         """Lightning hook that is called at the beginning of fit (train + validate), validate,

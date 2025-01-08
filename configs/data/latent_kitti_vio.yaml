@@ -5,12 +5,12 @@ pin_memory: False
 train_loader:
   _target_: src.data.components.latent_kitti_dataset.LatentVectorDataset
   _partial_: false
-  root_dir: ${paths.data_dir}/kitti_latent_data/train_64
+  root_dir: ${paths.data_dir}/kitti_latent_data/train_10
 val_loader:
   _target_: src.data.components.latent_kitti_dataset.LatentVectorDataset
   _partial_: false
-  root_dir: ${paths.data_dir}/kitti_latent_data/val_64
+  root_dir: ${paths.data_dir}/kitti_latent_data/val_10
 test_loader: 
   _target_: src.data.components.latent_kitti_dataset.LatentVectorDataset
   _partial_: false
-  root_dir: ${paths.data_dir}/kitti_latent_data/val_64
+  root_dir: ${paths.data_dir}/kitti_latent_data/val_10

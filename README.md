@@ -106,6 +106,8 @@ python src/train.py experiment=experiment_name.yaml trainer=gpu
 Best paper results
 ```bash
 python src/train.py experiment=latent_kitti_vio_weighted_tf trainer=gpu logger=tensorboard  tags=['TE, 11, L1, 40, no, yes']
+
+python src/eval.py trainer=gpu ckpt_path=logs/train/runs/2025-01-08_00-25-07/checkpoints/epoch_196.ckpt
 ```
 
 
@@ -113,7 +115,7 @@ MVFormer
 ```bash
 python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
 
-python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no'] debug=default
+python src/train.py experiment=latent_kitti_vio_mvformer trainer=ddp logger=tensorboard tags=['TE, 11, L1, 1, no, no'] debug=default
 ```
   
 

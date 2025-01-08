@@ -39,17 +39,36 @@ class KITTILatentTester(BaseTester):
 
         self.kitti_latent_tester = KITTI_tester_latent(self.args, self.wrapper_weights_path, use_history_in_eval=use_history_in_eval)
     
+    # def test(self, model: torch.nn.Module) -> Dict[str, Any]:
+    #     results = {}
+    #     for i, seq in enumerate(self.val_seq):
+    #         print(f"Testing sequence {i+1} of {len(self.val_seq)}")
+    #         pose_est = self.kitti_latent_tester.test_one_path(model, self.kitti_latent_tester.dataloader[i])
+    #         pose_gt = self.kitti_latent_tester.dataloader[i].poses_rel
+    #
+    #         results[seq] = {
+    #             'estimated_poses': pose_est,
+    #             'gt_poses': pose_gt
+    #         }
+    #
+    #     return results
+
     def test(self, model: torch.nn.Module) -> Dict[str, Any]:
+        # Use eval which internally calls test_one_path and calculates metrics
+        errors = self.kitti_latent_tester.eval(model)
+
+        # Generate plots and save text files
+        self.kitti_latent_tester.generate_plots(save_dir=self.folder, window_size=100)
+
+        # Return results in dictionary format
         results = {}
         for i, seq in enumerate(self.val_seq):
-            print(f"Testing sequence {i+1} of {len(self.val_seq)}")
-            pose_est = self.kitti_latent_tester.test_one_path(model, self.kitti_latent_tester.dataloader[i])
-            pose_gt = self.kitti_latent_tester.dataloader[i].poses_rel
-            
             results[seq] = {
-                'estimated_poses': pose_est,
-                'gt_poses': pose_gt
-            }
+                    'estimated_poses': self.kitti_latent_tester.est[i]['pose_est_global'],
+                    'gt_poses': self.kitti_latent_tester.est[i]['pose_gt_global']
+                }
+
+        self.save_results(results, self.folder)
 
         return results
 

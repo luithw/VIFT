@@ -36,7 +36,7 @@ tester:
   val_seqs: ['05','07', '10']
   data_dir: ${paths.data_dir}/kitti_data
   seq_len: 11
-  folder: sequences
+  folder: ${paths.output_dir}
   img_w: 512
   img_h: 256
 
