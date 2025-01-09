@@ -89,10 +89,11 @@ class KITTI_tester_latent():
         self.est = []
         for i, seq in enumerate(self.args.val_seq):
             print(f'testing sequence {seq}')
-            pose_est = self.test_one_path(net, self.dataloader[i], num_gpu=num_gpu)            
+            pose_est = self.test_one_path(net, self.dataloader[i], num_gpu=num_gpu)
+            pose_gt = self.dataloader[i].poses_rel
             pose_est_global, pose_gt_global, t_rel, r_rel, t_rmse, r_rmse, speed = kitti_eval(pose_est, self.dataloader[i].poses_rel)
             
-            self.est.append({'pose_est_global':pose_est_global, 'pose_gt_global':pose_gt_global, 'speed':speed})
+            self.est.append({'pose_est':pose_est, 'pose_gt':pose_gt, 'pose_est_global':pose_est_global, 'pose_gt_global':pose_gt_global, 'speed':speed})
             self.errors.append({'t_rel':t_rel, 'r_rel':r_rel, 't_rmse':t_rmse, 'r_rmse':r_rmse})
             
         return self.errors

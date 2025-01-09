@@ -55,6 +55,7 @@ class KITTILatentTester(BaseTester):
 
     def test(self, model: torch.nn.Module) -> Dict[str, Any]:
         # Use eval which internally calls test_one_path and calculates metrics
+
         errors = self.kitti_latent_tester.eval(model)
 
         # Generate plots and save text files
@@ -64,10 +65,9 @@ class KITTILatentTester(BaseTester):
         results = {}
         for i, seq in enumerate(self.val_seq):
             results[seq] = {
-                    'estimated_poses': self.kitti_latent_tester.est[i]['pose_est_global'],
-                    'gt_poses': self.kitti_latent_tester.est[i]['pose_gt_global']
+                    'estimated_poses': self.kitti_latent_tester.est[i]['pose_est'],
+                    'gt_poses': self.kitti_latent_tester.est[i]['pose_gt']
                 }
-
         self.save_results(results, self.folder)
 
         return results

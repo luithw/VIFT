@@ -68,7 +68,7 @@ class VIOLitModule(LightningModule):
         for name, value in metrics.items():
             self.log(f"test/{name}", value)
         
-        save_dir = self.trainer.logger.log_dir
+        # save_dir = self.trainer.logger.log_dir
         # self.tester.save_results(results, save_dir)
 
     def setup(self, stage):

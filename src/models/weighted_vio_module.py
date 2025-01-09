@@ -61,7 +61,7 @@ class WeightedVIOLitModule(LightningModule):
             metric_sum += value
         self.log("hp_metric", metric_sum)
         
-        save_dir = self.trainer.logger.log_dir
+        # save_dir = self.trainer.logger.log_dir
         # self.tester.save_results(results, save_dir)
 
     def setup(self, stage):
