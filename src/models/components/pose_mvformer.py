@@ -26,7 +26,7 @@ class PoseMVFormer(nn.Module):
         self.smart_final = smart_final
 
         # Project both feature types to common dimension
-        self.vi_projection = nn.Linear(input_dim, dino_dim)
+        self.vi_projection = nn.Linear(input_dim, embedding_dim)
 
         # LSTP Components
         self.nst = num_entities  # Static tokens
@@ -35,42 +35,57 @@ class PoseMVFormer(nn.Module):
 
         # Learnable queries for static tokens
         self.Q_s = nn.Parameter(torch.empty([1, self.nst, embedding_dim], dtype=torch.float32))
-        nn.init.kaiming_uniform_(self.Q_s, a=math.sqrt(5))
         self.Q_s_b = nn.Parameter(torch.empty(embedding_dim, dtype=torch.float32))
-        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.Q_s)
-        bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-        nn.init.uniform_(self.Q_s_b, -bound, bound)
+
+        # Projections for key and value
+        self.linear_K2d = nn.Linear(dino_dim, embedding_dim)
+        self.linear_V2d = nn.Linear(dino_dim, embedding_dim)
 
         # Try to load LSTP parameters if available
         lstp_path = "./trained_lstp/lstp_params.pth"
         if os.path.exists(lstp_path):
-            try:
-                print(f"Loading LSTP parameters from {lstp_path}")
-                lstp_state = torch.load(lstp_path, map_location='cpu')
-                if 'Q_s' in lstp_state and 'Q_s_b' in lstp_state:
-                    # Verify shapes match
-                    if (lstp_state['Q_s'].shape == self.Q_s.shape and
-                            lstp_state['Q_s_b'].shape == self.Q_s_b.shape):
-                        self.Q_s.data.copy_(lstp_state['Q_s'])
-                        self.Q_s_b.data.copy_(lstp_state['Q_s_b'])
-                        print("Successfully loaded LSTP parameters")
-                    else:
-                        print(f"Shape mismatch in LSTP parameters. Expected {self.Q_s.shape}, {self.Q_s_b.shape} "
-                              f"but got {lstp_state['Q_s'].shape}, {lstp_state['Q_s_b'].shape}")
-                        self._init_lstp_params()  # Fall back to default initialization
-                else:
-                    print("LSTP parameter file doesn't contain expected keys")
-                    self._init_lstp_params()
-            except Exception as e:
-                print(f"Error loading LSTP parameters: {str(e)}")
+            print(f"Loading LSTP parameters from {lstp_path}")
+            lstp_state = torch.load(lstp_path, map_location='cpu')
+            load_success = True
+
+            # Check all parameters exist and shapes match
+            param_pairs = [
+                ('Q_s', self.Q_s),
+                ('Q_s_b', self.Q_s_b),
+                ('K_proj.weight', self.linear_K2d.weight),
+                ('K_proj.bias', self.linear_K2d.bias),
+                ('V_proj.weight', self.linear_V2d.weight),
+                ('V_proj.bias', self.linear_V2d.bias)
+            ]
+
+            for saved_name, param in param_pairs:
+                if saved_name not in lstp_state:
+                    print(f"Missing parameter {saved_name} in LSTP file")
+                    load_success = False
+                    break
+                if lstp_state[saved_name].shape != param.shape:
+                    print(f"Shape mismatch for {saved_name}. Expected {param.shape}, "
+                          f"got {lstp_state[saved_name].shape}")
+                    load_success = False
+                    break
+
+            if load_success:
+                # Load parameters
+                for saved_name, param in param_pairs:
+                    param.data.copy_(lstp_state[saved_name])
+                    param.requires_grad = False  # Freeze parameter
+                print("Successfully loaded and froze LSTP parameters")
+            else:
+                print("Failed to load LSTP parameters, using default initialization")
                 self._init_lstp_params()
         else:
             print(f"LSTP parameter file not found at {lstp_path}")
             self._init_lstp_params()
 
-        # Projections for key and value
-        self.key_projection = nn.Linear(dino_dim, embedding_dim)
-        self.value_projection = nn.Linear(dino_dim, embedding_dim)
+        # You may want to verify parameters are frozen
+        for name, param in self.named_parameters():
+            if any(p[0].replace('.', '') in name for p in param_pairs):
+                assert not param.requires_grad, f"Parameter {name} should be frozen"
 
         # Transformer components
         self.transformer_encoder = nn.TransformerEncoder(
@@ -95,6 +110,14 @@ class PoseMVFormer(nn.Module):
             nn.Linear(embedding_dim, 6)
         )
 
+    def _init_lstp_params(self):
+        """Default initialization for LSTP parameters"""
+        nn.init.kaiming_uniform_(self.Q_s, a=math.sqrt(5))
+        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.Q_s)
+        bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+        nn.init.uniform_(self.Q_s_b, -bound, bound)
+        # Key and value projections use their default initializations
+
     def positional_embedding(self, seq_length, device):
         pos = torch.arange(0, seq_length, dtype=torch.float, device=device).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, self.d_model, 2, device=device).float() *
@@ -108,16 +131,9 @@ class PoseMVFormer(nn.Module):
         visual_inertial_features, dino_features, _, _ = batch
         batch_size, seq_length, num_tokens, dino_dim = dino_features.shape
 
-        # Project visual_inertial_features to dino dimension
-        vi_features = self.vi_projection(visual_inertial_features)  # [B, S, dino_dim]
-        vi_features = vi_features.unsqueeze(2)  # [B, S, 1, dino_dim]
-
-        # Combine features along token dimension
-        combined_features = torch.cat([vi_features, dino_features], dim=2)  # [B, S, N+1, dino_dim]
-
         # LSTP Cross Attention
-        K = self.key_projection(combined_features)  # [B, S, N+1, embedding_dim]
-        V = self.value_projection(combined_features)  # [B, S, N+1, embedding_dim]
+        K = self.linear_K2d(dino_features)  # [B, S, N+1, embedding_dim]
+        V = self.linear_V2d(dino_features)  # [B, S, N+1, embedding_dim]
         Q = self.Q_s + self.Q_s_b  # [1, nst, embedding_dim]
 
         # Compute attention scores
@@ -127,45 +143,54 @@ class PoseMVFormer(nn.Module):
         # Apply attention to values
         entity_features = torch.matmul(attn, V)  # [B*S, nst, embedding_dim]
 
+        # Project visual_inertial_features to dino dimension
+        vi_features = self.vi_projection(visual_inertial_features)  # [B, S, dino_dim]
+        vi_features = vi_features.unsqueeze(2)  # [B, S, 1, dino_dim]
+
+        # Combine features along token dimension
+        combined_features = torch.cat([vi_features, entity_features], dim=2)  # [B, S, N+1, dino_dim]
+
+        num_tokens = self.nst + 1
+
         # Reshape for transformer - combine batch and nst dimensions
-        entity_features = entity_features.view(batch_size, seq_length, self.nst, -1)  # [B, S, nst, embedding_dim]
-        entity_features = entity_features.transpose(1, 2)  # [B, nst, S, embedding_dim]
-        entity_features = entity_features.reshape(batch_size * self.nst, seq_length, -1)  # [B*nst, S, embedding_dim]
+        combined_features = combined_features.view(batch_size, seq_length, num_tokens, -1)  # [B, S, nst, embedding_dim]
+        combined_features = combined_features.transpose(1, 2)  # [B, nst, S, embedding_dim]
+        combined_features = combined_features.reshape(batch_size * num_tokens, seq_length, -1)  # [B*nst, S, embedding_dim]
 
         # Add positional embeddings
-        pos_emb = self.positional_embedding(seq_length, entity_features.device)  # [1, S, D]
-        entity_features = entity_features + pos_emb  # Broadcasting to [B*nst, S, D]
+        pos_emb = self.positional_embedding(seq_length, combined_features.device)  # [1, S, D]
+        combined_features = combined_features + pos_emb  # Broadcasting to [B*nst, S, D]
 
         # Generate causal mask for temporal sequence only
-        mask = self.generate_causal_mask(seq_length, entity_features.device)  # [S, S]
+        mask = self.generate_causal_mask(seq_length, combined_features.device)  # [S, S]
 
         # Pass through transformer - each entity sequence attends to itself only
-        entity_features = self.transformer_encoder(entity_features, mask=mask)  # [B*nst, S, D]
+        time_fused_features = self.transformer_encoder(combined_features, mask=mask)  # [B*nst, S, D]
 
         # Reshape back
-        entity_features = entity_features.view(batch_size, self.nst, seq_length, -1)  # [B, nst, S, D]
-        entity_features = entity_features.transpose(1, 2)  # [B, S, nst, D]
+        time_fused_features = time_fused_features.view(batch_size, num_tokens, seq_length, -1)  # [B, nst, S, D]
+        time_fused_features = time_fused_features.transpose(1, 2)  # [B, S, nst, D]
 
         # Apply different smart_final methods
         if self.smart_final == 'max':
             # Max pool across entity dimension
-            entity_features, _ = torch.max(entity_features, dim=2)  # [B, S, D]
+            pose_features, _ = torch.max(time_fused_features, dim=2)  # [B, S, D]
 
         elif self.smart_final == 'one':
             # Take first entity token (CLS-style)
-            entity_features = entity_features[:, :, 0, :]  # [B, S, D]
+            pose_features = time_fused_features[:, :, 0, :]  # [B, S, D]
 
         elif self.smart_final == 'avg':
             # Average pool across entity dimension
-            entity_features = torch.mean(entity_features, dim=2)  # [B, S, D]
+            pose_features = torch.mean(time_fused_features, dim=2)  # [B, S, D]
 
         elif self.smart_final == 'lin':
             # Linear reduction of concatenated entities
-            entity_features = entity_features.view(batch_size, seq_length, -1)  # [B, S, nst*D]
-            entity_features = self.lin_final(entity_features)  # [B, S, D]
+            time_fused_features = time_fused_features.view(batch_size, seq_length, -1)  # [B, S, nst*D]
+            pose_features = self.lin_final(time_fused_features)  # [B, S, D]
 
         # Predict poses
-        poses = self.pose_head(entity_features)  # [B, S, 6]
+        poses = self.pose_head(pose_features)  # [B, S, 6]
 
         return poses
 

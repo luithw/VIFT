@@ -25,7 +25,7 @@ net:
   nhead: 6
   dim_feedforward: 128
   dropout: 0.0
-  smart_final: 'avg'
+  smart_final: 'one'
 
 metrics_calculator:
   _target_: src.metrics.kitti_metrics_calculator.KITTIMetricsCalculator
