@@ -114,8 +114,6 @@ python src/eval.py trainer=gpu ckpt_path=logs/train/runs/2025-01-08_00-25-07/che
 MVFormer
 ```bash
 python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['TE, 11, L1, 1, no, no']
-
-python src/train.py experiment=latent_kitti_vio_mvformer trainer=ddp logger=tensorboard tags=['TE, 11, L1, 1, no, no'] debug=default
 ```
   
 

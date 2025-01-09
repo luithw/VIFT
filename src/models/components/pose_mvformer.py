@@ -1,14 +1,17 @@
+import os
+
 import torch
 import torch.nn as nn
 import math
 
 
 class PoseMVFormer(nn.Module):
+
     def __init__(
             self,
             input_dim=768,  # visual_inertial_features dim
             dino_dim=2304,  # dino_features dim
-            embedding_dim=128,  # Common dimension after projection
+            embedding_dim=384,  # Common dimension after projection
             num_layers=2,
             nhead=8,
             dim_feedforward=512,
@@ -37,6 +40,33 @@ class PoseMVFormer(nn.Module):
         fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.Q_s)
         bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
         nn.init.uniform_(self.Q_s_b, -bound, bound)
+
+        # Try to load LSTP parameters if available
+        lstp_path = "./trained_lstp/lstp_params.pth"
+        if os.path.exists(lstp_path):
+            try:
+                print(f"Loading LSTP parameters from {lstp_path}")
+                lstp_state = torch.load(lstp_path, map_location='cpu')
+                if 'Q_s' in lstp_state and 'Q_s_b' in lstp_state:
+                    # Verify shapes match
+                    if (lstp_state['Q_s'].shape == self.Q_s.shape and
+                            lstp_state['Q_s_b'].shape == self.Q_s_b.shape):
+                        self.Q_s.data.copy_(lstp_state['Q_s'])
+                        self.Q_s_b.data.copy_(lstp_state['Q_s_b'])
+                        print("Successfully loaded LSTP parameters")
+                    else:
+                        print(f"Shape mismatch in LSTP parameters. Expected {self.Q_s.shape}, {self.Q_s_b.shape} "
+                              f"but got {lstp_state['Q_s'].shape}, {lstp_state['Q_s_b'].shape}")
+                        self._init_lstp_params()  # Fall back to default initialization
+                else:
+                    print("LSTP parameter file doesn't contain expected keys")
+                    self._init_lstp_params()
+            except Exception as e:
+                print(f"Error loading LSTP parameters: {str(e)}")
+                self._init_lstp_params()
+        else:
+            print(f"LSTP parameter file not found at {lstp_path}")
+            self._init_lstp_params()
 
         # Projections for key and value
         self.key_projection = nn.Linear(dino_dim, embedding_dim)

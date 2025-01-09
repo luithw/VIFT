@@ -20,7 +20,7 @@ criterion:
 net:
   _target_: src.models.components.pose_mvformer.PoseMVFormer
   input_dim: 768
-  embedding_dim: 768
+  embedding_dim: 384
   num_layers: 4
   nhead: 6
   dim_feedforward: 128
