@@ -2,8 +2,8 @@
 
 defaults:
   - _self_
-  - data: latent_kitti_vio # choose datamodule with `test_dataloader()` for evaluation
-  - model: weighted_latent_vio_tf
+  - data: latent_dino_kitti_vio # choose datamodule with `test_dataloader()` for evaluation
+  - model: latent_vio_mvformer # choose model with `test_step()` for evaluation
   - logger: null
   - paths: default
   - extras: default
