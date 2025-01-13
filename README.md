@@ -113,7 +113,7 @@ python src/eval.py trainer=gpu ckpt_path=logs/train/runs/2025-01-08_00-25-07/che
 
 MVFormer
 ```bash
-python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['LSTP Frozen final one late fusion']
+python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['LSTP freeze train']
 
 python src/train.py experiment=latent_kitti_vio_mvformer trainer=gpu logger=tensorboard tags=['LSTP'] debug=default
 ```

@@ -6,7 +6,6 @@ import math
 
 
 class PoseMVFormer(nn.Module):
-
     def __init__(
             self,
             input_dim=768,  # visual_inertial_features dim
@@ -24,6 +23,18 @@ class PoseMVFormer(nn.Module):
                                'lin'], f"smart_final must be one of ['max', 'one', 'avg', 'lin'], got {smart_final}"
 
         self.smart_final = smart_final
+        self.current_epoch = 0  # Add epoch tracking
+        self.unfreeze_epoch = 100  # Epoch at which to unfreeze
+
+        # Store parameter names that should be frozen/unfrozen
+        self.lstp_param_names = [
+            'Q_s',
+            'Q_s_b',
+            'linear_K2d.weight',
+            'linear_K2d.bias',
+            'linear_V2d.weight',
+            'linear_V2d.bias'
+        ]
 
         # Project both feature types to common dimension
         self.vi_projection = nn.Linear(input_dim, embedding_dim)
@@ -41,51 +52,8 @@ class PoseMVFormer(nn.Module):
         self.linear_K2d = nn.Linear(dino_dim, embedding_dim)
         self.linear_V2d = nn.Linear(dino_dim, embedding_dim)
 
-        # Try to load LSTP parameters if available
-        lstp_path = "./trained_lstp/lstp_params.pth"
-        if os.path.exists(lstp_path):
-            print(f"Loading LSTP parameters from {lstp_path}")
-            lstp_state = torch.load(lstp_path, map_location='cpu')
-            load_success = True
-
-            # Check all parameters exist and shapes match
-            param_pairs = [
-                ('Q_s', self.Q_s),
-                ('Q_s_b', self.Q_s_b),
-                ('K_proj.weight', self.linear_K2d.weight),
-                ('K_proj.bias', self.linear_K2d.bias),
-                ('V_proj.weight', self.linear_V2d.weight),
-                ('V_proj.bias', self.linear_V2d.bias)
-            ]
-
-            for saved_name, param in param_pairs:
-                if saved_name not in lstp_state:
-                    print(f"Missing parameter {saved_name} in LSTP file")
-                    load_success = False
-                    break
-                if lstp_state[saved_name].shape != param.shape:
-                    print(f"Shape mismatch for {saved_name}. Expected {param.shape}, "
-                          f"got {lstp_state[saved_name].shape}")
-                    load_success = False
-                    break
-
-            if load_success:
-                # Load parameters
-                for saved_name, param in param_pairs:
-                    param.data.copy_(lstp_state[saved_name])
-                    param.requires_grad = False  # Freeze parameter
-                print("Successfully loaded and froze LSTP parameters")
-            else:
-                print("Failed to load LSTP parameters, using default initialization")
-                self._init_lstp_params()
-        else:
-            print(f"LSTP parameter file not found at {lstp_path}")
-            self._init_lstp_params()
-
-        # You may want to verify parameters are frozen
-        for name, param in self.named_parameters():
-            if any(p[0].replace('.', '') in name for p in param_pairs):
-                assert not param.requires_grad, f"Parameter {name} should be frozen"
+        # Load LSTP parameters and initially freeze them
+        self._load_and_freeze_lstp()
 
         # Transformer components
         self.transformer_encoder = nn.TransformerEncoder(
@@ -109,6 +77,63 @@ class PoseMVFormer(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Linear(embedding_dim, 6)
         )
+
+    def _load_and_freeze_lstp(self):
+        """Load LSTP parameters and set their initial frozen state"""
+        lstp_path = "./trained_lstp/lstp_params.pth"
+        if os.path.exists(lstp_path):
+            print(f"Loading LSTP parameters from {lstp_path}")
+            lstp_state = torch.load(lstp_path, map_location='cpu')
+            load_success = True
+
+            # Create pairs of parameter names and their corresponding objects
+            param_pairs = [
+                ('Q_s', self.Q_s),
+                ('Q_s_b', self.Q_s_b),
+                ('K_proj.weight', self.linear_K2d.weight),
+                ('K_proj.bias', self.linear_K2d.bias),
+                ('V_proj.weight', self.linear_V2d.weight),
+                ('V_proj.bias', self.linear_V2d.bias)
+            ]
+
+            # Verify and load parameters
+            for saved_name, param in param_pairs:
+                if saved_name not in lstp_state:
+                    print(f"Missing parameter {saved_name} in LSTP file")
+                    load_success = False
+                    break
+                if lstp_state[saved_name].shape != param.shape:
+                    print(
+                        f"Shape mismatch for {saved_name}. Expected {param.shape}, got {lstp_state[saved_name].shape}")
+                    load_success = False
+                    break
+
+            if load_success:
+                for saved_name, param in param_pairs:
+                    param.data.copy_(lstp_state[saved_name])
+                    param.requires_grad = False  # Initially freeze parameter
+                print("Successfully loaded and froze LSTP parameters")
+            else:
+                print("Failed to load LSTP parameters, using default initialization")
+                self._init_lstp_params()
+        else:
+            print(f"LSTP parameter file not found at {lstp_path}")
+            self._init_lstp_params()
+
+    def set_epoch(self, epoch):
+        """Update current epoch and manage parameter freezing"""
+        self.current_epoch = epoch
+
+        # Unfreeze parameters if we've reached the unfreeze epoch
+        if epoch == self.unfreeze_epoch:
+            self._toggle_lstp_parameters(requires_grad=True)
+            print(f"Epoch {epoch}: Unfreezing LSTP parameters")
+
+    def _toggle_lstp_parameters(self, requires_grad=True):
+        """Toggle the frozen state of LSTP parameters"""
+        for name, param in self.named_parameters():
+            if any(p in name for p in self.lstp_param_names):
+                param.requires_grad = requires_grad
 
     def _init_lstp_params(self):
         """Default initialization for LSTP parameters"""

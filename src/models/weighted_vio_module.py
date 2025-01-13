@@ -22,6 +22,9 @@ class WeightedVIOLitModule(LightningModule):
         self.tester = tester
         self.metrics_calculator = metrics_calculator
 
+    def on_train_epoch_start(self):
+        # Update the epoch in the network
+        self.net.set_epoch(self.current_epoch)
 
     def forward(self, x, target):
         return self.net(x, target)
